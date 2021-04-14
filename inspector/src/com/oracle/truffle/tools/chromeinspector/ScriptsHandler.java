@@ -155,6 +155,7 @@ public final class ScriptsHandler implements LoadSourceListener {
         }
     }
 
+
     @Override
     public void onLoad(LoadSourceEvent event) {
         Source source = event.getSource();
