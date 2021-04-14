@@ -150,14 +150,21 @@ public final class ScriptsHandler implements LoadSourceListener {
             String uniqueName;
             synchronized (uniqueSourceNames) {
                 int count = uniqueSourceNames.getOrDefault(name, 0);
-                uniqueName = name;
+                count++;
+                if (count == 1) {
+                    uniqueName = name;
+                } else {
+                    do {
+                        uniqueName = count + "/" + name;
+                    } while (uniqueSourceNames.containsKey(uniqueName) && (count++) > 0);
+                }
                 uniqueSourceNames.put(name, count);
             }
             return uniqueName;
         }
         return source.getURI().toString();
     }
-    
+
     @Override
     public void onLoad(LoadSourceEvent event) {
         Source source = event.getSource();
