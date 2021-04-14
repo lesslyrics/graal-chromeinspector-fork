@@ -132,32 +132,28 @@ public final class ScriptsHandler implements LoadSourceListener {
         URL url = source.getURL();
         if (url != null) {
             return url.toExternalForm();
-        }
-        String path = source.getPath();
-        if (path != null) {
-            if (source.getURI().isAbsolute()) {
-                return new File(path).toPath().toUri().toString();
-            } else {
-                if (File.separatorChar == '/') {
-                    return path;
+        } else {
+            String path = source.getPath();
+            if (path != null) {
+                if (source.getURI().isAbsolute()) {
+                    return (new File(path)).toPath().toUri().toString();
                 } else {
-                    return path.replace(File.separatorChar, '/');
+                    return File.separatorChar == '/' ? path : path.replace(File.separatorChar, '/');
+                }
+            } else {
+                String name = source.getName();
+                if (name != null) {
+                    synchronized(this.uniqueSourceNames) {
+                        int count = (Integer)this.uniqueSourceNames.getOrDefault(name, 0);
+                        this.uniqueSourceNames.put(name, count);
+                        return name;
+                    }
+                } else {
+                    return source.getURI().toString();
                 }
             }
         }
-        String name = source.getName();
-        if (name != null) {
-            String uniqueName;
-            synchronized (uniqueSourceNames) {
-                int count = uniqueSourceNames.getOrDefault(name, 0);
-                uniqueName = name;
-                uniqueSourceNames.put(name, count);
-            }
-            return uniqueName;
-        }
-        return source.getURI().toString();
     }
-
 
     @Override
     public void onLoad(LoadSourceEvent event) {
