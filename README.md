@@ -1,4 +1,4 @@
-# Graal-chromeinspector-fork
+# Graal-fork
 This is the fork to the official Graal repository aimed to provide customization to the chromeinspector tool. 
 To build the tool:
 
