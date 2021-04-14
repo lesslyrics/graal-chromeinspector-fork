@@ -1,3 +1,15 @@
+# Graal-fork
+This is the fork to the official Graal repository aimed to provide customization to the chromeinspector tool. 
+To build the tool:
+
+```javascript
+cd tools
+export JAVA_HOME=/path/to/java/
+mx build
+```
+After that the JAR distributive could be found in tools/mxbuild/dists/jdk[N].
+
+
 # GraalVM
 
 [![https://graalvm.slack.com](https://img.shields.io/badge/slack-join%20channel-active)](https://www.graalvm.org/slack-invitation/)
