@@ -1,7 +1,7 @@
 package com.oracle.truffle.tools.chromeinspector;
 
 import com.oracle.truffle.api.debug.Breakpoint;
-import com.oracle.truffle.api.debug.SuspendedEvent;
+import com.oracle.truffle.api.debug.DebuggerSession;
 
 import java.util.List;
 
@@ -10,12 +10,12 @@ public interface BreakpointsListener {
     /**
      * Listens to the inspector breakpoints pause events
      */
-    void onBreakpointPause(SuspendedEvent suspendedEvent);
+    void onBreakpointPause(DebuggerSession session);
 
     /**
      * Listens to the inspector breakpoints resume events
      */
-    void onBreakpointResume(SuspendedEvent suspendedEvent);
+    void onBreakpointResume(DebuggerSession session);
 
     /**
      * Listens to the inspector breakpoints create events

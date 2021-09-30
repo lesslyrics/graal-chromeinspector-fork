@@ -1,7 +1,7 @@
 package com.oracle.truffle.tools.chromeinspector;
 
 import com.oracle.truffle.api.debug.Breakpoint;
-import com.oracle.truffle.api.debug.SuspendedEvent;
+import com.oracle.truffle.api.debug.DebuggerSession;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 
@@ -15,16 +15,16 @@ public class BreakpointsListenerBasicImpl implements BreakpointsListener {
      * Listens to the inspector breakpoints pause events
      */
     @Override
-    public void onBreakpointPause(SuspendedEvent suspendedEvent) {
-        logger.info("BREAKPOINTS LISTENER: onBreakpointPaused. Number of breakpoints: ${suspendedEvent.breakpoints.size} ");
+    public void onBreakpointPause(DebuggerSession session) {
+        logger.info("BREAKPOINTS LISTENER: onBreakpointPaused");
     }
 
     /**
      * Listens to the inspector breakpoints resume events
      */
     @Override
-    public void onBreakpointResume(SuspendedEvent suspendedEvent) {
-        logger.info("BREAKPOINTS LISTENER: onBreakpointResume. Number of breakpoints: ${suspendedEvent.breakpoints.size}");
+    public void onBreakpointResume(DebuggerSession session) {
+        logger.info("BREAKPOINTS LISTENER: onBreakpointResume");
     }
 
     /**

@@ -302,7 +302,7 @@ public final class InspectorDebugger extends DebuggerDomain {
         CharSequence characters = getScript(scriptId).getCharacters();
         JSONObject json = new JSONObject();
         json.put("scriptSource", characters.toString());
-        logger.info("Script source with id " + scriptId + "received");
+        logger.info("Script source with id " + scriptId + " received");
 
         return new Params(json);
     }
@@ -325,7 +325,7 @@ public final class InspectorDebugger extends DebuggerDomain {
     public void pause() {
         DebuggerSuspendedInfo susp = suspendedInfo;
         if (susp == null) {
-            breakpointsListener.onBreakpointPause(suspendedInfo.getSuspendedEvent());
+            breakpointsListener.onBreakpointPause(debuggerSession);
             debuggerSession.suspendNextExecution();
         } else {
             logger.info("Suspended info on execution pause is not null: ");
@@ -378,7 +378,7 @@ public final class InspectorDebugger extends DebuggerDomain {
         synchronized (suspendLock) {
             if (!running) {
                 running = true;
-                breakpointsListener.onBreakpointResume(suspendedInfo.getSuspendedEvent());
+                breakpointsListener.onBreakpointResume(debuggerSession);
                 suspendLock.notifyAll();
             }
         }
@@ -1038,7 +1038,7 @@ public final class InspectorDebugger extends DebuggerDomain {
 
         @Override
         public void onSuspend(SuspendedEvent se) {
-            breakpointsListener.onBreakpointPause(se);
+            breakpointsListener.onBreakpointPause(debuggerSession);
 
             logger.info("on suspend event: " + se.getBreakpoints().size());
             try {
