@@ -142,7 +142,7 @@ public final class InspectorDebugger extends DebuggerDomain {
         scriptsHandler = context.acquireScriptsHandler();
         scriptsHandler.setDebuggerSession(debuggerSession);
         breakpointsHandler = new BreakpointsHandler(debuggerSession, scriptsHandler, () -> eventHandler);
-        logger.info("Session is started");
+        logger.info("Session is started. Number of opened sessions: " + debuggerSession.getDebugger().getSessionCount());
     }
 
     @Override
@@ -289,7 +289,7 @@ public final class InspectorDebugger extends DebuggerDomain {
             }
         }
         json.put("locations", arr);
-        logger.info("Possible breakpoints: " + arr);
+        logger.info("Possible breakpoints for start: " + start.toJSON() + " and end: "  + end.toJSON() + ":" + arr);
 
         return new Params(json);
     }
@@ -302,7 +302,7 @@ public final class InspectorDebugger extends DebuggerDomain {
         CharSequence characters = getScript(scriptId).getCharacters();
         JSONObject json = new JSONObject();
         json.put("scriptSource", characters.toString());
-        logger.info("Script source received:  " + scriptId);
+        logger.info("Script source with id " + scriptId + "received");
 
         return new Params(json);
     }
