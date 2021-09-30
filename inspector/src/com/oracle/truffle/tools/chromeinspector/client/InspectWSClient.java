@@ -24,6 +24,21 @@
  */
 package com.oracle.truffle.tools.chromeinspector.client;
 
+import com.oracle.truffle.api.TruffleOptions;
+import com.oracle.truffle.tools.chromeinspector.InspectorExecutionContext;
+import com.oracle.truffle.tools.chromeinspector.instrument.InspectorWSConnection;
+import com.oracle.truffle.tools.chromeinspector.instrument.KeyStoreOptions;
+import com.oracle.truffle.tools.chromeinspector.instrument.Token;
+import com.oracle.truffle.tools.chromeinspector.server.ConnectionWatcher;
+import com.oracle.truffle.tools.chromeinspector.server.InspectServerSession;
+import com.oracle.truffle.tools.utils.java_websocket.client.WebSocketClient;
+import com.oracle.truffle.tools.utils.java_websocket.handshake.ServerHandshake;
+import org.graalvm.polyglot.io.MessageEndpoint;
+
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSocketFactory;
+import javax.net.ssl.TrustManagerFactory;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -32,29 +47,8 @@ import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
-import java.security.KeyManagementException;
-import java.security.KeyStore;
-import java.security.KeyStoreException;
-import java.security.NoSuchAlgorithmException;
-import java.security.UnrecoverableKeyException;
+import java.security.*;
 import java.security.cert.CertificateException;
-import javax.net.ssl.KeyManagerFactory;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLSocketFactory;
-import javax.net.ssl.TrustManagerFactory;
-
-import com.oracle.truffle.tools.chromeinspector.instrument.Token;
-import org.graalvm.polyglot.io.MessageEndpoint;
-import com.oracle.truffle.api.TruffleOptions;
-
-import com.oracle.truffle.tools.utils.java_websocket.client.WebSocketClient;
-import com.oracle.truffle.tools.utils.java_websocket.handshake.ServerHandshake;
-
-import com.oracle.truffle.tools.chromeinspector.InspectorExecutionContext;
-import com.oracle.truffle.tools.chromeinspector.instrument.InspectorWSConnection;
-import com.oracle.truffle.tools.chromeinspector.instrument.KeyStoreOptions;
-import com.oracle.truffle.tools.chromeinspector.server.ConnectionWatcher;
-import com.oracle.truffle.tools.chromeinspector.server.InspectServerSession;
 
 /**
  * Web socket client that connects to a listening inspector client.

@@ -24,35 +24,6 @@
  */
 package com.oracle.truffle.tools.chromeinspector.instrument;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.UnknownHostException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.security.SecureRandom;
-import java.util.ArrayList;
-import java.util.Base64;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Consumer;
-import java.util.function.Supplier;
-
-import org.graalvm.options.OptionCategory;
-import org.graalvm.options.OptionDescriptor;
-import org.graalvm.options.OptionDescriptors;
-import org.graalvm.options.OptionKey;
-import org.graalvm.options.OptionStability;
-import org.graalvm.options.OptionType;
-import org.graalvm.options.OptionValues;
-import org.graalvm.polyglot.io.MessageEndpoint;
-import org.graalvm.polyglot.io.MessageTransport;
-
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.TruffleContext;
 import com.oracle.truffle.api.instrumentation.ContextsListener;
@@ -60,15 +31,24 @@ import com.oracle.truffle.api.instrumentation.EventBinding;
 import com.oracle.truffle.api.instrumentation.TruffleInstrument;
 import com.oracle.truffle.api.interop.TruffleObject;
 import com.oracle.truffle.api.nodes.LanguageInfo;
-
 import com.oracle.truffle.tools.chromeinspector.InspectorExecutionContext;
-import com.oracle.truffle.tools.chromeinspector.objects.Inspector;
 import com.oracle.truffle.tools.chromeinspector.client.InspectWSClient;
-import com.oracle.truffle.tools.chromeinspector.server.ConnectionWatcher;
-import com.oracle.truffle.tools.chromeinspector.server.InspectServerSession;
-import com.oracle.truffle.tools.chromeinspector.server.WSInterceptorServer;
-import com.oracle.truffle.tools.chromeinspector.server.InspectorServer;
-import com.oracle.truffle.tools.chromeinspector.server.InspectorServerConnection;
+import com.oracle.truffle.tools.chromeinspector.objects.Inspector;
+import com.oracle.truffle.tools.chromeinspector.server.*;
+import org.graalvm.options.*;
+import org.graalvm.polyglot.io.MessageEndpoint;
+import org.graalvm.polyglot.io.MessageTransport;
+
+import java.io.File;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.net.*;
+import java.security.SecureRandom;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 /**
  * Chrome inspector as an instrument.

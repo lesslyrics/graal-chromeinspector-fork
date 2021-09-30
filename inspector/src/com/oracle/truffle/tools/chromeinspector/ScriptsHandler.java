@@ -24,20 +24,15 @@
  */
 package com.oracle.truffle.tools.chromeinspector;
 
-import java.io.File;
-import java.net.URL;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 import com.oracle.truffle.api.debug.DebuggerSession;
 import com.oracle.truffle.api.instrumentation.LoadSourceEvent;
 import com.oracle.truffle.api.instrumentation.LoadSourceListener;
 import com.oracle.truffle.api.source.Source;
-
 import com.oracle.truffle.tools.chromeinspector.types.Script;
+
+import java.io.File;
+import java.net.URL;
+import java.util.*;
 
 public final class ScriptsHandler implements LoadSourceListener {
 
@@ -116,9 +111,8 @@ public final class ScriptsHandler implements LoadSourceListener {
             }
             id = scripts.size();
             String sourceUrl = getSourceURL(source);
-            scr = new Script(id, sourceUrl, source, sourceLoaded);
+            scr = new Script(id, sourceUrl, source);
             sourceIDs.put(source, id);
-            sourceIDs.put(sourceLoaded, id);
             scripts.add(scr);
             listenersToNotify = listeners.toArray(new LoadScriptListener[listeners.size()]);
         }
@@ -127,6 +121,7 @@ public final class ScriptsHandler implements LoadSourceListener {
         }
         return id;
     }
+
 
     public String getSourceURL(Source source) {
         URL url = source.getURL();
@@ -154,7 +149,6 @@ public final class ScriptsHandler implements LoadSourceListener {
             }
         }
     }
-
 
     @Override
     public void onLoad(LoadSourceEvent event) {

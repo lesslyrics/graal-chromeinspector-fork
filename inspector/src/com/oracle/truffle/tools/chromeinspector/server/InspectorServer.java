@@ -24,38 +24,14 @@
  */
 package com.oracle.truffle.tools.chromeinspector.server;
 
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.InputStream;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.io.OutputStreamWriter;
-import java.io.PrintWriter;
-import java.io.PushbackInputStream;
-import java.io.UnsupportedEncodingException;
-import java.net.Inet4Address;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.Socket;
-import java.net.SocketException;
-import java.net.UnknownHostException;
-import java.nio.ByteBuffer;
-import java.security.KeyStore;
-import java.security.KeyStoreException;
-import java.security.NoSuchAlgorithmException;
-import java.security.UnrecoverableKeyException;
-import java.security.cert.CertificateException;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.ConcurrentHashMap;
-import javax.net.ssl.KeyManagerFactory;
-import javax.net.ssl.SSLServerSocketFactory;
-
+import com.oracle.truffle.api.TruffleOptions;
+import com.oracle.truffle.tools.chromeinspector.InspectorExecutionContext;
+import com.oracle.truffle.tools.chromeinspector.instrument.InspectorWSConnection;
+import com.oracle.truffle.tools.chromeinspector.instrument.KeyStoreOptions;
 import com.oracle.truffle.tools.chromeinspector.instrument.Token;
+import com.oracle.truffle.tools.utils.json.JSONArray;
+import com.oracle.truffle.tools.utils.json.JSONObject;
+import org.graalvm.polyglot.io.MessageEndpoint;
 import org.nanohttpd.protocols.http.ClientHandler;
 import org.nanohttpd.protocols.http.IHTTPSession;
 import org.nanohttpd.protocols.http.NanoHTTPD;
@@ -69,15 +45,24 @@ import org.nanohttpd.protocols.websockets.WebSocket;
 import org.nanohttpd.protocols.websockets.WebSocketFrame;
 import org.nanohttpd.util.IHandler;
 
-import org.graalvm.polyglot.io.MessageEndpoint;
-
-import com.oracle.truffle.api.TruffleOptions;
-import com.oracle.truffle.tools.utils.json.JSONArray;
-import com.oracle.truffle.tools.utils.json.JSONObject;
-
-import com.oracle.truffle.tools.chromeinspector.InspectorExecutionContext;
-import com.oracle.truffle.tools.chromeinspector.instrument.KeyStoreOptions;
-import com.oracle.truffle.tools.chromeinspector.instrument.InspectorWSConnection;
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLServerSocketFactory;
+import java.io.*;
+import java.net.InetSocketAddress;
+import java.net.Socket;
+import java.net.SocketException;
+import java.nio.ByteBuffer;
+import java.security.KeyStore;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.UnrecoverableKeyException;
+import java.security.cert.CertificateException;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Server of the
@@ -227,24 +212,11 @@ public final class InspectorServer extends NanoWSD implements InspectorWSConnect
             return false;
         } else {
             final String bareHost = host.replaceFirst(":([0-9]+)$", "");
-            return (bareHost.equals("localhost") || isValidIp(bareHost));
+            return (bareHost.equals("localhost"));
         }
     }
 
-    private static boolean isValidIp(String host) {
-        boolean ipv6 = host.startsWith("[") && host.endsWith("]");
-        String h = host;
-        if (ipv6) {
-            h = h.substring(1, h.length() - 1);
-        }
-        InetAddress address;
-        try {
-            address = InetAddress.getByName(h);
-        } catch (UnknownHostException ex) {
-            return false;
-        }
-        return address instanceof Inet4Address == !ipv6;
-    }
+
 
     public String getWSAddress(Token token) {
         ServerPathSession serverSession = sessions.get(token);

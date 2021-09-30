@@ -24,52 +24,10 @@
  */
 package com.oracle.truffle.tools.chromeinspector;
 
-import java.io.File;
-import java.io.PrintWriter;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.Phaser;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReadWriteLock;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.util.regex.PatternSyntaxException;
-
-import com.oracle.truffle.tools.utils.json.JSONArray;
-import com.oracle.truffle.tools.utils.json.JSONObject;
-
-import com.oracle.truffle.api.debug.Breakpoint;
-import com.oracle.truffle.api.debug.DebugException;
-import com.oracle.truffle.api.debug.DebugScope;
-import com.oracle.truffle.api.debug.DebugStackFrame;
-import com.oracle.truffle.api.debug.DebugStackTraceElement;
-import com.oracle.truffle.api.debug.DebugValue;
-import com.oracle.truffle.api.debug.Debugger;
-import com.oracle.truffle.api.debug.DebuggerSession;
-import com.oracle.truffle.api.debug.SourceElement;
-import com.oracle.truffle.api.debug.StepConfig;
-import com.oracle.truffle.api.debug.SuspendAnchor;
-import com.oracle.truffle.api.debug.SuspendedCallback;
-import com.oracle.truffle.api.debug.SuspendedEvent;
-import com.oracle.truffle.api.debug.SuspensionFilter;
+import com.oracle.truffle.api.debug.*;
 import com.oracle.truffle.api.nodes.LanguageInfo;
 import com.oracle.truffle.api.source.Source;
 import com.oracle.truffle.api.source.SourceSection;
-
 import com.oracle.truffle.tools.chromeinspector.InspectorExecutionContext.CancellableRunnable;
 import com.oracle.truffle.tools.chromeinspector.InspectorExecutionContext.NoSuspendedThreadException;
 import com.oracle.truffle.tools.chromeinspector.InspectorExecutionContext.SuspendedThreadExecutor;
@@ -80,17 +38,23 @@ import com.oracle.truffle.tools.chromeinspector.domains.DebuggerDomain;
 import com.oracle.truffle.tools.chromeinspector.events.Event;
 import com.oracle.truffle.tools.chromeinspector.server.CommandProcessException;
 import com.oracle.truffle.tools.chromeinspector.server.InspectServerSession.CommandPostProcessor;
-import com.oracle.truffle.tools.chromeinspector.types.CallArgument;
-import com.oracle.truffle.tools.chromeinspector.types.CallFrame;
-import com.oracle.truffle.tools.chromeinspector.types.ExceptionDetails;
-import com.oracle.truffle.tools.chromeinspector.types.Location;
-import com.oracle.truffle.tools.chromeinspector.types.RemoteObject;
-import com.oracle.truffle.tools.chromeinspector.types.Scope;
-import com.oracle.truffle.tools.chromeinspector.types.Script;
-import com.oracle.truffle.tools.chromeinspector.types.StackTrace;
+import com.oracle.truffle.tools.chromeinspector.types.*;
 import com.oracle.truffle.tools.chromeinspector.util.LineSearch;
-
+import com.oracle.truffle.tools.utils.json.JSONArray;
+import com.oracle.truffle.tools.utils.json.JSONObject;
 import org.graalvm.collections.Pair;
+
+import java.io.File;
+import java.io.PrintWriter;
+import java.util.*;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 
 public final class InspectorDebugger extends DebuggerDomain {
 
@@ -122,6 +86,16 @@ public final class InspectorDebugger extends DebuggerDomain {
     private final Phaser onSuspendPhaser = new Phaser();
     private final BlockingQueue<CancellableRunnable> suspendThreadExecutables = new LinkedBlockingQueue<>();
     private final ReadWriteLock domainLock;
+
+    private BreakpointsListener breakpointsListener = null;
+
+    public InspectorDebugger(InspectorExecutionContext context, boolean suspend, ReadWriteLock domainLock,
+                             BreakpointsListener breakpointsListener) {
+        this.breakpointsListener = breakpointsListener;
+        this.context = context;
+        this.domainLock = domainLock;
+        new InspectorDebugger(context, suspend, domainLock);
+    }
 
     public InspectorDebugger(InspectorExecutionContext context, boolean suspend, ReadWriteLock domainLock) {
         this.context = context;
@@ -253,7 +227,7 @@ public final class InspectorDebugger extends DebuggerDomain {
         }
         JSONObject json = new JSONObject();
         JSONArray arr = new JSONArray();
-        Source source = script.getSourceLoaded();
+        Source source = script.getSource();
         if (source.hasCharacters() && source.getLength() > 0) {
             int lc = source.getLineCount();
             int l1 = start.getLine();
@@ -339,6 +313,7 @@ public final class InspectorDebugger extends DebuggerDomain {
     public void pause() {
         DebuggerSuspendedInfo susp = suspendedInfo;
         if (susp == null) {
+            breakpointsListener.onBreakpointPause(suspendedInfo.getSuspendedEvent());
             debuggerSession.suspendNextExecution();
         }
     }
@@ -385,6 +360,7 @@ public final class InspectorDebugger extends DebuggerDomain {
         synchronized (suspendLock) {
             if (!running) {
                 running = true;
+                breakpointsListener.onBreakpointResume(suspendedInfo.getSuspendedEvent());
                 suspendLock.notifyAll();
             }
         }
@@ -589,11 +565,15 @@ public final class InspectorDebugger extends DebuggerDomain {
         if (line <= 0) {
             throw new CommandProcessException("Must specify line number.");
         }
-        if (!url.isEmpty()) {
-            return breakpointsHandler.createURLBreakpoint(url, line, column, condition);
-        } else {
-            return breakpointsHandler.createURLBreakpoint(Pattern.compile(urlRegex), line, column, condition);
+
+        Object urlToCreate = url;
+        if (url.isEmpty()) {
+            urlToCreate = Pattern.compile(urlRegex);
         }
+
+        Params createdBreakPoint = breakpointsHandler.createURLBreakpoint(urlToCreate, line, column, condition);
+        breakpointsListener.onBreakpointCreate(debuggerSession.getBreakpoints().size(), createdBreakPoint.getBreakpointId());
+        return createdBreakPoint;
     }
 
     @Override
@@ -601,6 +581,10 @@ public final class InspectorDebugger extends DebuggerDomain {
         if (location == null) {
             throw new CommandProcessException("Must specify location.");
         }
+        Params createdBreakPoint = breakpointsHandler.createBreakpoint(location, condition);
+
+        breakpointsListener.onBreakpointCreate(debuggerSession.getBreakpoints().size(), createdBreakPoint.getBreakpointId());
+
         return breakpointsHandler.createBreakpoint(location, condition);
     }
 
@@ -635,7 +619,11 @@ public final class InspectorDebugger extends DebuggerDomain {
     @Override
     public void removeBreakpoint(String id) throws CommandProcessException {
         if (!breakpointsHandler.removeBreakpoint(id)) {
+            breakpointsListener.onBreakpointDispose("No breakpoint with id '" + id + "'");
             throw new CommandProcessException("No breakpoint with id '" + id + "'");
+        } else {
+            breakpointsListener.onBreakpointDispose(id, debuggerSession.getDebugger().getSessionCount(),
+                    debuggerSession.getBreakpoints());
         }
     }
 
@@ -1029,6 +1017,9 @@ public final class InspectorDebugger extends DebuggerDomain {
 
         @Override
         public void onSuspend(SuspendedEvent se) {
+            breakpointsListener.onBreakpointPause(se);
+            System.out.println("onSuspend");
+
             try {
                 context.waitForRunPermission();
             } catch (InterruptedException ex) {
@@ -1145,7 +1136,7 @@ public final class InspectorDebugger extends DebuggerDomain {
                     silentResume = false;
                 }
             } finally {
-                onSuspendPhaser.arriveAndDeregister();
+                onSuspendPhaser.arrive();
                 if (delayUnlock.getAndSet(false)) {
                     future.set(scheduler.schedule(() -> {
                         unlock();
@@ -1153,6 +1144,7 @@ public final class InspectorDebugger extends DebuggerDomain {
                 } else {
                     unlock();
                 }
+                // TODO add logger to print se.getSourceSection().toString());
             }
         }
 

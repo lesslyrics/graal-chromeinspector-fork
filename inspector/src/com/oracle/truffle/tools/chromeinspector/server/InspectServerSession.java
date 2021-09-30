@@ -24,27 +24,10 @@
  */
 package com.oracle.truffle.tools.chromeinspector.server;
 
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.nio.ByteBuffer;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
-
-import org.graalvm.polyglot.io.MessageEndpoint;
-
-import com.oracle.truffle.tools.utils.json.JSONArray;
-import com.oracle.truffle.tools.utils.json.JSONException;
-import com.oracle.truffle.tools.utils.json.JSONObject;
 import com.oracle.truffle.api.interop.ArityException;
 import com.oracle.truffle.api.interop.UnsupportedMessageException;
 import com.oracle.truffle.api.interop.UnsupportedTypeException;
-import com.oracle.truffle.tools.chromeinspector.InspectorDebugger;
-import com.oracle.truffle.tools.chromeinspector.InspectorExecutionContext;
-import com.oracle.truffle.tools.chromeinspector.InspectorProfiler;
-import com.oracle.truffle.tools.chromeinspector.InspectorRuntime;
+import com.oracle.truffle.tools.chromeinspector.*;
 import com.oracle.truffle.tools.chromeinspector.commands.Command;
 import com.oracle.truffle.tools.chromeinspector.commands.ErrorResponse;
 import com.oracle.truffle.tools.chromeinspector.commands.Params;
@@ -57,6 +40,19 @@ import com.oracle.truffle.tools.chromeinspector.events.Event;
 import com.oracle.truffle.tools.chromeinspector.events.EventHandler;
 import com.oracle.truffle.tools.chromeinspector.types.CallArgument;
 import com.oracle.truffle.tools.chromeinspector.types.Location;
+import com.oracle.truffle.tools.utils.json.JSONArray;
+import com.oracle.truffle.tools.utils.json.JSONException;
+import com.oracle.truffle.tools.utils.json.JSONObject;
+import org.graalvm.polyglot.io.MessageEndpoint;
+
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.nio.ByteBuffer;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public final class InspectServerSession implements MessageEndpoint {
 
@@ -64,6 +60,7 @@ public final class InspectServerSession implements MessageEndpoint {
     private final DebuggerDomain debugger;
     private final ProfilerDomain profiler;
     private final ReadWriteLock domainLock;
+
     final InspectorExecutionContext context;
     private volatile MessageEndpoint messageEndpoint;
     private volatile JSONMessageListener jsonMessageListener;
@@ -80,9 +77,14 @@ public final class InspectServerSession implements MessageEndpoint {
     }
 
     public static InspectServerSession create(InspectorExecutionContext context, boolean debugBreak, ConnectionWatcher connectionWatcher) {
+        return create(context, debugBreak, connectionWatcher, new BreakpointsListenerBasicImpl());
+    }
+
+    public static InspectServerSession create(InspectorExecutionContext context, boolean debugBreak,
+                                              ConnectionWatcher connectionWatcher, BreakpointsListener breakpointsListener) {
         ReadWriteLock domainLock = new ReentrantReadWriteLock();
         RuntimeDomain runtime = new InspectorRuntime(context);
-        DebuggerDomain debugger = new InspectorDebugger(context, debugBreak, domainLock);
+        DebuggerDomain debugger = new InspectorDebugger(context, debugBreak, domainLock, breakpointsListener);
         ProfilerDomain profiler = new InspectorProfiler(context, connectionWatcher);
         return new InspectServerSession(runtime, debugger, profiler, context, domainLock);
     }
