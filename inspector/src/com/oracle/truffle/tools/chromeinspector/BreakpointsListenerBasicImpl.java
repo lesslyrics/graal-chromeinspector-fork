@@ -32,7 +32,7 @@ public class BreakpointsListenerBasicImpl implements BreakpointsListener {
      */
     @Override
     public void onBreakpointCreate(int breakpointsNumber, String newBreakpointId) {
-        logger.info("BREAKPOINTS LISTENER: onBreakpointCreate. Number of breakpoints: $breakpointsNumber, New Breakpoint Id: $newBreakpointId");
+        logger.info("BREAKPOINTS LISTENER: onBreakpointCreate. Number of breakpoints: " + breakpointsNumber + ". New Breakpoint Id:" + newBreakpointId);
     }
 
 
@@ -42,13 +42,13 @@ public class BreakpointsListenerBasicImpl implements BreakpointsListener {
      */
     @Override
     public void onBreakpointDispose(String id, int sessionCount, List<Breakpoint> allPossibleBreakpoints) {
-        logger.info("BREAKPOINTS LISTENER: onBreakpointDispose. Breakpoint Id: $id, session count: $sessionCount");
+        logger.info("BREAKPOINTS LISTENER: onBreakpointDispose. Breakpoint Id: " + id + " session count: " + sessionCount);
     }
 
 
     @Override
     public void onBreakpointDispose(String errorMsg) {
-        logger.info("BREAKPOINTS LISTENER: onBreakpointDispose error $errorMsg");
+        logger.info("BREAKPOINTS LISTENER: onBreakpointDispose error " + errorMsg);
     }
 
 }

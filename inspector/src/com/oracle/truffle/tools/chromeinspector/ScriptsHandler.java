@@ -27,6 +27,7 @@ package com.oracle.truffle.tools.chromeinspector;
 import com.oracle.truffle.api.debug.DebuggerSession;
 import com.oracle.truffle.api.instrumentation.LoadSourceEvent;
 import com.oracle.truffle.api.instrumentation.LoadSourceListener;
+import com.oracle.truffle.api.instrumentation.TruffleInstrument;
 import com.oracle.truffle.api.source.Source;
 import com.oracle.truffle.tools.chromeinspector.types.Script;
 
@@ -41,9 +42,11 @@ public final class ScriptsHandler implements LoadSourceListener {
     private final Map<String, Integer> uniqueSourceNames = new HashMap<>();
     private final List<LoadScriptListener> listeners = new ArrayList<>();
     private final boolean reportInternal;
+    private final TruffleInstrument.Env env;
     private volatile DebuggerSession debuggerSession;
 
-    public ScriptsHandler(boolean reportInternal) {
+    ScriptsHandler(TruffleInstrument.Env env, boolean reportInternal) {
+        this.env = env;
         this.reportInternal = reportInternal;
     }
 
@@ -111,8 +114,9 @@ public final class ScriptsHandler implements LoadSourceListener {
             }
             id = scripts.size();
             String sourceUrl = getSourceURL(source);
-            scr = new Script(id, sourceUrl, source);
+            scr = new Script(id, sourceUrl, source, sourceLoaded);
             sourceIDs.put(source, id);
+            sourceIDs.put(sourceLoaded, id);
             scripts.add(scr);
             listenersToNotify = listeners.toArray(new LoadScriptListener[listeners.size()]);
         }
@@ -122,32 +126,45 @@ public final class ScriptsHandler implements LoadSourceListener {
         return id;
     }
 
-
     public String getSourceURL(Source source) {
         URL url = source.getURL();
         if (url != null) {
             return url.toExternalForm();
-        } else {
-            String path = source.getPath();
-            if (path != null) {
-                if (source.getURI().isAbsolute()) {
-                    return (new File(path)).toPath().toUri().toString();
-                } else {
-                    return File.separatorChar == '/' ? path : path.replace(File.separatorChar, '/');
-                }
+        }
+        String path = source.getPath();
+        if (path != null) {
+            if (source.getURI().isAbsolute()) {
+                return source.getURI().toString();
             } else {
-                String name = source.getName();
-                if (name != null) {
-                    synchronized(this.uniqueSourceNames) {
-                        int count = (Integer)this.uniqueSourceNames.getOrDefault(name, 0);
-                        this.uniqueSourceNames.put(name, count);
-                        return name;
+                try {
+                    return env.getTruffleFile(path).getAbsoluteFile().toUri().toString();
+                } catch (SecurityException ex) {
+                    if (File.separatorChar == '/') {
+                        return path;
+                    } else {
+                        return path.replace(File.separatorChar, '/');
                     }
-                } else {
-                    return source.getURI().toString();
                 }
             }
         }
+        String name = source.getName();
+        if (name != null) {
+            String uniqueName;
+            synchronized (uniqueSourceNames) {
+                int count = uniqueSourceNames.getOrDefault(name, 0);
+                count++;
+                if (count == 1) {
+                    uniqueName = name;
+                } else {
+                    do {
+                        uniqueName = count + "/" + name;
+                    } while (uniqueSourceNames.containsKey(uniqueName) && (count++) > 0);
+                }
+                uniqueSourceNames.put(name, count);
+            }
+            return uniqueName;
+        }
+        return source.getURI().toString();
     }
 
     @Override
