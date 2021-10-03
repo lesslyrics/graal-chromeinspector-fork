@@ -109,11 +109,13 @@ public final class ScriptsHandler implements LoadSourceListener {
         LoadScriptListener[] listenersToNotify;
         synchronized (sourceIDs) {
             Integer eid = sourceIDs.get(source);
+
             if (eid != null) {
                 return eid;
             }
             id = scripts.size();
             String sourceUrl = getSourceURL(source);
+
             scr = new Script(id, sourceUrl, source, sourceLoaded);
             sourceIDs.put(source, id);
             sourceIDs.put(sourceLoaded, id);
@@ -153,6 +155,7 @@ public final class ScriptsHandler implements LoadSourceListener {
             synchronized (uniqueSourceNames) {
                 int count = uniqueSourceNames.getOrDefault(name, 0);
                 count++;
+
                 if (count == 1) {
                     uniqueName = name;
                 } else {
