@@ -588,7 +588,7 @@ public final class InspectorDebugger extends DebuggerDomain {
 
         breakpointsListener.onBreakpointCreate(debuggerSession.getBreakpoints().size(), createdBreakPoint.getBreakpointId());
 
-        return breakpointsHandler.createBreakpoint(location, condition);
+        return createdBreakPoint;
     }
 
     @Override
