@@ -39,8 +39,7 @@ import com.oracle.truffle.tools.chromeinspector.types.Location;
 import com.oracle.truffle.tools.chromeinspector.types.Script;
 import com.oracle.truffle.tools.utils.json.JSONArray;
 import com.oracle.truffle.tools.utils.json.JSONObject;
-import org.apache.log4j.LogManager;
-import org.apache.log4j.Logger;
+
 
 import java.net.URI;
 import java.util.HashMap;
@@ -62,8 +61,6 @@ final class BreakpointsHandler {
     private final Map<Breakpoint, SourceSection> resolvedBreakpoints = new HashMap<>();
     private final Map<Long, LoadScriptListener> scriptListeners = new HashMap<>();
     private final AtomicReference<Breakpoint> exceptionBreakpoint = new AtomicReference<>();
-
-    private static Logger logger = LogManager.getLogger(BreakpointsHandler.class);
 
 
     BreakpointsHandler(DebuggerSession ds, ScriptsHandler slh, Supplier<EventHandler> eventHandler) {
@@ -103,8 +100,6 @@ final class BreakpointsHandler {
                             Location resolvedLocation = new Location(script.getId(), section.getStartLine(), section.getStartColumn());
                             locations.put(resolvedLocation.toJSON());
                         }
-                        logger.info("\n added breakpoint with id " + id + " to script " + script.getUrl() +
-                                " " + script.getSource() + ", scriptID " + script.getId() + ". bpIDs.size = " + bpIDs.size());
 
                     }
                 }

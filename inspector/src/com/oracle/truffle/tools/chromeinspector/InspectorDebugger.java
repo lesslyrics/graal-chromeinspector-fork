@@ -42,8 +42,6 @@ import com.oracle.truffle.tools.chromeinspector.types.*;
 import com.oracle.truffle.tools.chromeinspector.util.LineSearch;
 import com.oracle.truffle.tools.utils.json.JSONArray;
 import com.oracle.truffle.tools.utils.json.JSONObject;
-import org.apache.log4j.LogManager;
-import org.apache.log4j.Logger;
 import org.graalvm.collections.Pair;
 
 import java.io.File;
@@ -59,8 +57,6 @@ import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
 public final class InspectorDebugger extends DebuggerDomain {
-
-    private static Logger logger = LogManager.getLogger(InspectorDebugger.class);
 
     private static final StepConfig STEP_CONFIG = StepConfig.newBuilder().suspendAnchors(SourceElement.ROOT, SuspendAnchor.AFTER).build();
 
@@ -130,7 +126,6 @@ public final class InspectorDebugger extends DebuggerDomain {
             }
             debuggerSession.suspendNextExecution();
         }
-        logger.info("InspectorDebugger initialized");
     }
 
     private void startSession() {
@@ -142,7 +137,6 @@ public final class InspectorDebugger extends DebuggerDomain {
         scriptsHandler = context.acquireScriptsHandler();
         scriptsHandler.setDebuggerSession(debuggerSession);
         breakpointsHandler = new BreakpointsHandler(debuggerSession, scriptsHandler, () -> eventHandler);
-        logger.info("Session is started. Number of opened sessions: " + debuggerSession.getDebugger().getSessionCount());
     }
 
     @Override
@@ -170,7 +164,6 @@ public final class InspectorDebugger extends DebuggerDomain {
                 suspendLock.notifyAll();
             }
         }
-        logger.info("InspectorDebugger disabled");
     }
 
     @Override
@@ -289,7 +282,6 @@ public final class InspectorDebugger extends DebuggerDomain {
             }
         }
         json.put("locations", arr);
-        logger.info("Possible breakpoints for start: " + start.toJSON() + " and end: "  + end.toJSON() + ":" + arr);
 
         return new Params(json);
     }
@@ -302,7 +294,6 @@ public final class InspectorDebugger extends DebuggerDomain {
         CharSequence characters = getScript(scriptId).getCharacters();
         JSONObject json = new JSONObject();
         json.put("scriptSource", characters.toString());
-        logger.info("Script source with id " + scriptId + " received");
 
         return new Params(json);
     }
@@ -317,7 +308,6 @@ public final class InspectorDebugger extends DebuggerDomain {
         } catch (NumberFormatException nfe) {
             throw new CommandProcessException(nfe.getMessage());
         }
-        logger.info("Script: " + script.getUrl());
         return script;
     }
 
@@ -327,9 +317,6 @@ public final class InspectorDebugger extends DebuggerDomain {
         if (susp == null) {
             breakpointsListener.onBreakpointPause(debuggerSession);
             debuggerSession.suspendNextExecution();
-        } else {
-            logger.info("Suspended info on execution pause is not null: ");
-            susp.getSuspendedEvent().getSession().getBreakpoints().forEach ( it -> logger.info (it.getLocationDescription()));
         }
     }
 
@@ -337,10 +324,7 @@ public final class InspectorDebugger extends DebuggerDomain {
     public void resume(CommandPostProcessor postProcessor) {
         DebuggerSuspendedInfo susp = suspendedInfo;
         if (susp != null) {
-            susp.getSuspendedEvent().getSession().getBreakpoints().forEach ( it -> logger.info (it.getLocationDescription()));
             postProcessor.setPostProcessJob(() -> doResume());
-        } else {
-            logger.info("Suspended info on execution pause is null");
         }
     }
 
@@ -384,7 +368,6 @@ public final class InspectorDebugger extends DebuggerDomain {
         }
         // Wait for onSuspend() to finish
         try {
-            logger.info("On resume event, wait for onSuspend() to finish");
             onSuspendPhaser.awaitAdvanceInterruptibly(0);
         } catch (InterruptedException ex) {
             ex.printStackTrace();
@@ -523,7 +506,6 @@ public final class InspectorDebugger extends DebuggerDomain {
     private Scope createScope(String scopeType, DebugScope dscope, int index, String lastId) {
         RemoteObject scopeVars = new RemoteObject(dscope, lastId);
         context.getRemoteObjectsHandler().register(scopeVars);
-        logger.info("New scope created: " + dscope.getName());
         return new Scope(scopeType, scopeVars, dscope.getName(), null, null, index);
     }
 
@@ -1041,7 +1023,6 @@ public final class InspectorDebugger extends DebuggerDomain {
         public void onSuspend(SuspendedEvent se) {
             breakpointsListener.onBreakpointPause(debuggerSession);
 
-            logger.info("on suspend event: " + se.getBreakpoints().size());
             try {
                 context.waitForRunPermission();
             } catch (InterruptedException ex) {
@@ -1166,7 +1147,6 @@ public final class InspectorDebugger extends DebuggerDomain {
                 } else {
                     unlock();
                 }
-                logger.info("On resume event:" + se.getSourceSection().toString());
             }
         }
 

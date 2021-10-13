@@ -2,8 +2,6 @@ package com.oracle.truffle.tools.chromeinspector;
 
 import com.oracle.truffle.api.debug.Breakpoint;
 import com.oracle.truffle.api.debug.DebuggerSession;
-import org.apache.log4j.LogManager;
-import org.apache.log4j.Logger;
 
 import java.util.List;
 
@@ -24,7 +22,6 @@ public class BreakpointsListenerBasicImpl implements BreakpointsListener {
      */
     @Override
     public void onBreakpointResume(DebuggerSession session) {
-        logger.info("BREAKPOINTS LISTENER: onBreakpointResume");
     }
 
     /**
@@ -32,7 +29,6 @@ public class BreakpointsListenerBasicImpl implements BreakpointsListener {
      */
     @Override
     public void onBreakpointCreate(int breakpointsNumber, String newBreakpointId) {
-        logger.info("BREAKPOINTS LISTENER: onBreakpointCreate. Number of breakpoints: " + breakpointsNumber + ". New Breakpoint Id:" + newBreakpointId);
     }
 
 
@@ -42,13 +38,11 @@ public class BreakpointsListenerBasicImpl implements BreakpointsListener {
      */
     @Override
     public void onBreakpointDispose(String id, int sessionCount, List<Breakpoint> allPossibleBreakpoints) {
-        logger.info("BREAKPOINTS LISTENER: onBreakpointDispose. Breakpoint Id: " + id + " session count: " + sessionCount);
     }
 
 
     @Override
     public void onBreakpointDispose(String errorMsg) {
-        logger.info("BREAKPOINTS LISTENER: onBreakpointDispose error " + errorMsg);
     }
 
 }
