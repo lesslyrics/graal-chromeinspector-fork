@@ -7,10 +7,12 @@ import java.util.List;
 
 public interface BreakpointsListener {
 
+    boolean canSuspend(DebuggerSession session);
+
     /**
      * Listens to the inspector breakpoints pause events
      */
-    void onBreakpointPause(DebuggerSession session);
+    void onBreakpointSuspend(DebuggerSession session);
 
     /**
      * Listens to the inspector breakpoints resume events

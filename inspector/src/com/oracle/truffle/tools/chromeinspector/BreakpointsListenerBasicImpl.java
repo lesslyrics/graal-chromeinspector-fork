@@ -7,12 +7,16 @@ import java.util.List;
 
 public class BreakpointsListenerBasicImpl implements BreakpointsListener {
 
+    @Override
+    public boolean canSuspend(DebuggerSession session) {
+        return true;
+    }
 
     /**
      * Listens to the inspector breakpoints pause events
      */
     @Override
-    public void onBreakpointPause(DebuggerSession session){
+    public void onBreakpointSuspend(DebuggerSession session){
     }
 
     /**

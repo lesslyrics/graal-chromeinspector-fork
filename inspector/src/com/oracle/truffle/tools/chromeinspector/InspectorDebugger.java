@@ -309,8 +309,10 @@ public final class InspectorDebugger extends DebuggerDomain {
     public void pause() {
         DebuggerSuspendedInfo susp = suspendedInfo;
         if (susp == null) {
-            breakpointsListener.onBreakpointPause(debuggerSession);
-            debuggerSession.suspendNextExecution();
+            if (breakpointsListener.canSuspend(debuggerSession)) {
+                breakpointsListener.onBreakpointSuspend(debuggerSession);
+                debuggerSession.suspendNextExecution();
+            }
         }
     }
 
@@ -352,7 +354,7 @@ public final class InspectorDebugger extends DebuggerDomain {
         }
     }
 
-    private void doResume() {
+    public void doResume() {
         synchronized (suspendLock) {
             if (!running) {
                 running = true;
@@ -1015,8 +1017,10 @@ public final class InspectorDebugger extends DebuggerDomain {
 
         @Override
         public void onSuspend(SuspendedEvent se) {
-            breakpointsListener.onBreakpointPause(debuggerSession);
-
+            if (!breakpointsListener.canSuspend(debuggerSession)) {
+                return;
+            }
+            breakpointsListener.onBreakpointSuspend(debuggerSession);
             try {
                 context.waitForRunPermission();
             } catch (InterruptedException ex) {
