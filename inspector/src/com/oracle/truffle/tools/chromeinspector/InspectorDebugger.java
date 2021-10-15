@@ -30,7 +30,6 @@ import com.oracle.truffle.api.source.Source;
 import com.oracle.truffle.api.source.SourceSection;
 import com.oracle.truffle.tools.chromeinspector.InspectorExecutionContext.CancellableRunnable;
 import com.oracle.truffle.tools.chromeinspector.InspectorExecutionContext.NoSuspendedThreadException;
-import com.oracle.truffle.tools.chromeinspector.InspectorExecutionContext.SuspendedThreadExecutor;
 import com.oracle.truffle.tools.chromeinspector.ScriptsHandler.LoadScriptListener;
 import com.oracle.truffle.tools.chromeinspector.commands.Params;
 import com.oracle.truffle.tools.chromeinspector.commands.Result;
@@ -91,29 +90,24 @@ public final class InspectorDebugger extends DebuggerDomain {
 
     public InspectorDebugger(InspectorExecutionContext context, boolean suspend, ReadWriteLock domainLock,
                              BreakpointsListener breakpointsListener) {
+        this(context, suspend, domainLock);
         this.breakpointsListener = breakpointsListener;
-        this.context = context;
-        this.domainLock = domainLock;
-        new InspectorDebugger(context, suspend, domainLock);
     }
 
     public InspectorDebugger(InspectorExecutionContext context, boolean suspend, ReadWriteLock domainLock) {
         this.context = context;
         this.domainLock = domainLock;
-        context.setSuspendThreadExecutor(new SuspendedThreadExecutor() {
-            @Override
-            public void execute(CancellableRunnable executable) throws NoSuspendedThreadException {
-                try {
-                    synchronized (suspendLock) {
-                        if (running) {
-                            NoSuspendedThreadException.raise();
-                        }
-                        suspendThreadExecutables.put(executable);
-                        suspendLock.notifyAll();
+        context.setSuspendThreadExecutor(executable -> {
+            try {
+                synchronized (suspendLock) {
+                    if (running) {
+                        NoSuspendedThreadException.raise();
                     }
-                } catch (InterruptedException iex) {
-                    throw new RuntimeException(iex);
+                    suspendThreadExecutables.put(executable);
+                    suspendLock.notifyAll();
                 }
+            } catch (InterruptedException iex) {
+                throw new RuntimeException(iex);
             }
         });
         if (suspend) {

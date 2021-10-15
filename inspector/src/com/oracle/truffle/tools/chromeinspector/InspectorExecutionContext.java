@@ -24,17 +24,6 @@
  */
 package com.oracle.truffle.tools.chromeinspector;
 
-import com.oracle.truffle.api.TruffleLogger;
-import com.oracle.truffle.api.debug.DebugException;
-import com.oracle.truffle.api.debug.DebugValue;
-import com.oracle.truffle.api.debug.DebuggerSession;
-import com.oracle.truffle.api.instrumentation.EventBinding;
-import com.oracle.truffle.api.instrumentation.SourceFilter;
-import com.oracle.truffle.api.instrumentation.TruffleInstrument;
-import com.oracle.truffle.tools.chromeinspector.server.CommandProcessException;
-import com.oracle.truffle.tools.chromeinspector.types.CallArgument;
-import com.oracle.truffle.tools.chromeinspector.types.RemoteObject;
-
 import java.io.PrintWriter;
 import java.net.URI;
 import java.util.ArrayList;
@@ -44,6 +33,18 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Level;
+
+import com.oracle.truffle.api.TruffleLogger;
+import com.oracle.truffle.api.debug.DebugException;
+import com.oracle.truffle.api.debug.DebugValue;
+import com.oracle.truffle.api.debug.DebuggerSession;
+import com.oracle.truffle.api.instrumentation.EventBinding;
+import com.oracle.truffle.api.instrumentation.SourceFilter;
+import com.oracle.truffle.api.instrumentation.TruffleInstrument;
+
+import com.oracle.truffle.tools.chromeinspector.server.CommandProcessException;
+import com.oracle.truffle.tools.chromeinspector.types.CallArgument;
+import com.oracle.truffle.tools.chromeinspector.types.RemoteObject;
 
 /**
  * The Truffle engine execution context.
@@ -153,7 +154,7 @@ public final class InspectorExecutionContext {
         synchronized (this) {
             sh = scriptsHandler;
             if (sh == null) {
-                scriptsHandler = sh = new ScriptsHandler(env, inspectInternal);
+                scriptsHandler = sh = new ScriptsHandler(inspectInternal);
                 attachListener = true;
                 schCounter = 0;
             }

@@ -24,9 +24,9 @@
  */
 package com.oracle.truffle.tools.chromeinspector.types;
 
-import com.oracle.truffle.api.source.Source;
-
 import java.text.MessageFormat;
+
+import com.oracle.truffle.api.source.Source;
 
 public final class Script {
 
@@ -67,8 +67,8 @@ public final class Script {
             return source.getCharacters();
         } else {
             return MessageFormat.format("Can not load source from {0}\n" +
-                    "Please use the --inspect.SourcePath option to point to the source locations.\n" +
-                    "Example: --inspect.SourcePath=/home/joe/project/src\n", source.getURI().toString());
+                            "Please use the --inspect.SourcePath option to point to the source locations.\n" +
+                            "Example: --inspect.SourcePath=/home/joe/project/src\n", url);
         }
     }
 

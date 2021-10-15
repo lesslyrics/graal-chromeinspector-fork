@@ -24,23 +24,6 @@
  */
 package com.oracle.truffle.tools.chromeinspector;
 
-import com.oracle.truffle.api.debug.Breakpoint;
-import com.oracle.truffle.api.debug.DebugValue;
-import com.oracle.truffle.api.debug.DebuggerSession;
-import com.oracle.truffle.api.debug.SourceElement;
-import com.oracle.truffle.api.source.Source;
-import com.oracle.truffle.api.source.SourceSection;
-import com.oracle.truffle.tools.chromeinspector.ScriptsHandler.LoadScriptListener;
-import com.oracle.truffle.tools.chromeinspector.commands.Params;
-import com.oracle.truffle.tools.chromeinspector.events.Event;
-import com.oracle.truffle.tools.chromeinspector.events.EventHandler;
-import com.oracle.truffle.tools.chromeinspector.server.CommandProcessException;
-import com.oracle.truffle.tools.chromeinspector.types.Location;
-import com.oracle.truffle.tools.chromeinspector.types.Script;
-import com.oracle.truffle.tools.utils.json.JSONArray;
-import com.oracle.truffle.tools.utils.json.JSONObject;
-
-
 import java.net.URI;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -49,6 +32,24 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
+
+import com.oracle.truffle.tools.utils.json.JSONArray;
+import com.oracle.truffle.tools.utils.json.JSONObject;
+
+import com.oracle.truffle.api.debug.Breakpoint;
+import com.oracle.truffle.api.debug.DebugValue;
+import com.oracle.truffle.api.debug.DebuggerSession;
+import com.oracle.truffle.api.debug.SourceElement;
+import com.oracle.truffle.api.source.Source;
+import com.oracle.truffle.api.source.SourceSection;
+
+import com.oracle.truffle.tools.chromeinspector.ScriptsHandler.LoadScriptListener;
+import com.oracle.truffle.tools.chromeinspector.commands.Params;
+import com.oracle.truffle.tools.chromeinspector.events.Event;
+import com.oracle.truffle.tools.chromeinspector.events.EventHandler;
+import com.oracle.truffle.tools.chromeinspector.server.CommandProcessException;
+import com.oracle.truffle.tools.chromeinspector.types.Location;
+import com.oracle.truffle.tools.chromeinspector.types.Script;
 
 final class BreakpointsHandler {
 
@@ -61,7 +62,6 @@ final class BreakpointsHandler {
     private final Map<Breakpoint, SourceSection> resolvedBreakpoints = new HashMap<>();
     private final Map<Long, LoadScriptListener> scriptListeners = new HashMap<>();
     private final AtomicReference<Breakpoint> exceptionBreakpoint = new AtomicReference<>();
-
 
     BreakpointsHandler(DebuggerSession ds, ScriptsHandler slh, Supplier<EventHandler> eventHandler) {
         this.ds = ds;
@@ -88,7 +88,7 @@ final class BreakpointsHandler {
             id = ++lastID;
             scriptListener = script -> {
                 if (url instanceof Pattern ? ((Pattern) url).matcher(script.getUrl()).matches() : ScriptsHandler.compareURLs((String) url, script.getUrl())) {
-                    Breakpoint bp = createBuilder(script.getSource(), line, column).resolveListener(resolvedHandler).build();
+                    Breakpoint bp = createBuilder(script.getSourceLoaded(), line, column).resolveListener(resolvedHandler).build();
                     if (condition != null && !condition.isEmpty()) {
                         bp.setCondition(condition);
                     }
@@ -100,7 +100,6 @@ final class BreakpointsHandler {
                             Location resolvedLocation = new Location(script.getId(), section.getStartLine(), section.getStartColumn());
                             locations.put(resolvedLocation.toJSON());
                         }
-
                     }
                 }
             };
@@ -118,7 +117,7 @@ final class BreakpointsHandler {
         if (script == null) {
             throw new CommandProcessException("No script with id '" + location.getScriptId() + "'");
         }
-        Breakpoint bp = createBuilder(script.getSource(), location.getLine(), location.getColumn()).resolveListener(resolvedHandler).build();
+        Breakpoint bp = createBuilder(script.getSourceLoaded(), location.getLine(), location.getColumn()).resolveListener(resolvedHandler).build();
         if (condition != null && !condition.isEmpty()) {
             bp.setCondition(condition);
         }
@@ -172,7 +171,7 @@ final class BreakpointsHandler {
         if (script == null) {
             throw new CommandProcessException("No script with id '" + location.getScriptId() + "'");
         }
-        Breakpoint bp = createBuilder(script.getSource(), location.getLine(), location.getColumn()).oneShot().build();
+        Breakpoint bp = createBuilder(script.getSourceLoaded(), location.getLine(), location.getColumn()).oneShot().build();
         ds.install(bp);
     }
 

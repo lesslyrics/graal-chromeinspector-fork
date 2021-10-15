@@ -7,14 +7,12 @@ import java.util.List;
 
 public class BreakpointsListenerBasicImpl implements BreakpointsListener {
 
-    private static Logger logger = LogManager.getLogger(BreakpointsListenerBasicImpl.class);
 
     /**
      * Listens to the inspector breakpoints pause events
      */
     @Override
-    public void onBreakpointPause(DebuggerSession session) {
-        logger.info("BREAKPOINTS LISTENER: onBreakpointPaused");
+    public void onBreakpointPause(DebuggerSession session){
     }
 
     /**

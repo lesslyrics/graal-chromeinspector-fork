@@ -48,9 +48,7 @@ import org.nanohttpd.util.IHandler;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLServerSocketFactory;
 import java.io.*;
-import java.net.InetSocketAddress;
-import java.net.Socket;
-import java.net.SocketException;
+import java.net.*;
 import java.nio.ByteBuffer;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
@@ -212,11 +210,24 @@ public final class InspectorServer extends NanoWSD implements InspectorWSConnect
             return false;
         } else {
             final String bareHost = host.replaceFirst(":([0-9]+)$", "");
-            return (bareHost.equals("localhost"));
+            return (bareHost.equals("localhost") || isValidIp(bareHost));
         }
     }
 
-
+    private static boolean isValidIp(String host) {
+        boolean ipv6 = host.startsWith("[") && host.endsWith("]");
+        String h = host;
+        if (ipv6) {
+            h = h.substring(1, h.length() - 1);
+        }
+        InetAddress address;
+        try {
+            address = InetAddress.getByName(h);
+        } catch (UnknownHostException ex) {
+            return false;
+        }
+        return address instanceof Inet4Address == !ipv6;
+    }
 
     public String getWSAddress(Token token) {
         ServerPathSession serverSession = sessions.get(token);
