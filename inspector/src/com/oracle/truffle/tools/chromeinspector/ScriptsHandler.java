@@ -24,15 +24,21 @@
  */
 package com.oracle.truffle.tools.chromeinspector;
 
+import java.io.File;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import com.oracle.truffle.api.debug.DebuggerSession;
 import com.oracle.truffle.api.instrumentation.LoadSourceEvent;
 import com.oracle.truffle.api.instrumentation.LoadSourceListener;
+import com.oracle.truffle.api.instrumentation.TruffleInstrument;
 import com.oracle.truffle.api.source.Source;
-import com.oracle.truffle.tools.chromeinspector.types.Script;
 
-import java.io.File;
-import java.net.URL;
-import java.util.*;
+import com.oracle.truffle.tools.chromeinspector.types.Script;
 
 public final class ScriptsHandler implements LoadSourceListener {
 
@@ -41,9 +47,11 @@ public final class ScriptsHandler implements LoadSourceListener {
     private final Map<String, Integer> uniqueSourceNames = new HashMap<>();
     private final List<LoadScriptListener> listeners = new ArrayList<>();
     private final boolean reportInternal;
+    private final TruffleInstrument.Env env;
     private volatile DebuggerSession debuggerSession;
 
-    public ScriptsHandler(boolean reportInternal) {
+    ScriptsHandler(TruffleInstrument.Env env, boolean reportInternal) {
+        this.env = env;
         this.reportInternal = reportInternal;
     }
 
@@ -94,7 +102,7 @@ public final class ScriptsHandler implements LoadSourceListener {
         }
     }
 
-    public int assureLoaded(Source sourceLoaded) {
+    public Script assureLoaded(Source sourceLoaded) {
         DebuggerSession ds = debuggerSession;
         Source sourceResolved = sourceLoaded;
         if (ds != null) {
@@ -102,14 +110,15 @@ public final class ScriptsHandler implements LoadSourceListener {
         }
         Source source = (sourceResolved != null) ? sourceResolved : sourceLoaded;
         Script scr;
-        int id;
         LoadScriptListener[] listenersToNotify;
         synchronized (sourceIDs) {
             Integer eid = sourceIDs.get(source);
             if (eid != null) {
-                return eid;
+                scr = scripts.get(eid);
+                assert scr != null : sourceLoaded;
+                return scr;
             }
-            id = scripts.size();
+            int id = scripts.size();
             String sourceUrl = getSourceURL(source);
             scr = new Script(id, sourceUrl, source, sourceLoaded);
             sourceIDs.put(source, id);
@@ -120,10 +129,53 @@ public final class ScriptsHandler implements LoadSourceListener {
         for (LoadScriptListener l : listenersToNotify) {
             l.loadedScript(scr);
         }
-        return id;
+        return scr;
     }
 
-    public String getSourceURL(Source source) {
+//    public String getSourceURL(Source source) {
+//        URL url = source.getURL();
+//        if (url != null) {
+//            return url.toExternalForm();
+//        }
+//        String path = source.getPath();
+//        if (path != null) {
+//            if (source.getURI().isAbsolute()) {
+//                return source.getURI().toString();
+//            } else {
+//                try {
+//                    return env.getTruffleFile(path).getAbsoluteFile().toUri().toString();
+//                } catch (SecurityException ex) {
+//                    if (File.separatorChar == '/') {
+//                        return path;
+//                    } else {
+//                        return path.replace(File.separatorChar, '/');
+//                    }
+//                }
+//            }
+//        }
+//        String name = source.getName();
+//        if (name != null) {
+//            String uniqueName;
+//            synchronized (uniqueSourceNames) {
+//                int count = uniqueSourceNames.getOrDefault(name, 0);
+//                count++;
+//                if (count == 1) {
+//                    uniqueName = name;
+//                } else {
+//                    do {
+//                        uniqueName = count + "/" + name;
+//                    } while (uniqueSourceNames.containsKey(uniqueName) && (count++) > 0);
+//                }
+//                uniqueSourceNames.put(name, count);
+//            }
+//            return uniqueName;
+//        }
+//        return source.getURI().toString();
+//    }
+    
+ 
+    
+        public String getSourceURL(Source source) {
         URL url = source.getURL();
         if (url != null) {
             return url.toExternalForm();
@@ -153,6 +205,9 @@ public final class ScriptsHandler implements LoadSourceListener {
         }
         return source.getURI().toString();
     }
+    
+    
+    
 
     @Override
     public void onLoad(LoadSourceEvent event) {
@@ -162,22 +217,13 @@ public final class ScriptsHandler implements LoadSourceListener {
         }
     }
 
-
-    @NotNull
-    public static String toSystemIndependentName(@NotNull String fileName) {
-        return fileName.replace('\\', '/');
-    }
-
-
-
     static boolean compareURLs(String url1, String url2) {
-        String surl1 = toSystemIndependentName(stripScheme(url1));
-        String surl2 = toSystemIndependentName(stripScheme(url2));
+        String surl1 = stripScheme(url1);
+        String surl2 = stripScheme(url2);
         // Either equals,
         // or equals while ignoring the initial slash (workaround for Chromium bug #851853)
         return surl1.equals(surl2) || surl1.startsWith("/") && surl1.substring(1).equals(surl2);
     }
-
 
     private static String stripScheme(String url) {
         // we can strip the scheme part iff it's "file"

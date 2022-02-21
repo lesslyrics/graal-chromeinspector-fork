@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2017, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,10 +24,24 @@
  */
 package com.oracle.truffle.tools.chromeinspector.server;
 
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.nio.ByteBuffer;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
+import com.oracle.truffle.tools.chromeinspector.*;
+import org.graalvm.polyglot.io.MessageEndpoint;
+
+import com.oracle.truffle.tools.utils.json.JSONArray;
+import com.oracle.truffle.tools.utils.json.JSONException;
+import com.oracle.truffle.tools.utils.json.JSONObject;
 import com.oracle.truffle.api.interop.ArityException;
 import com.oracle.truffle.api.interop.UnsupportedMessageException;
 import com.oracle.truffle.api.interop.UnsupportedTypeException;
-import com.oracle.truffle.tools.chromeinspector.*;
 import com.oracle.truffle.tools.chromeinspector.commands.Command;
 import com.oracle.truffle.tools.chromeinspector.commands.ErrorResponse;
 import com.oracle.truffle.tools.chromeinspector.commands.Params;
@@ -40,19 +54,6 @@ import com.oracle.truffle.tools.chromeinspector.events.Event;
 import com.oracle.truffle.tools.chromeinspector.events.EventHandler;
 import com.oracle.truffle.tools.chromeinspector.types.CallArgument;
 import com.oracle.truffle.tools.chromeinspector.types.Location;
-import com.oracle.truffle.tools.utils.json.JSONArray;
-import com.oracle.truffle.tools.utils.json.JSONException;
-import com.oracle.truffle.tools.utils.json.JSONObject;
-import org.graalvm.polyglot.io.MessageEndpoint;
-
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.nio.ByteBuffer;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public final class InspectServerSession implements MessageEndpoint {
 
@@ -60,7 +61,6 @@ public final class InspectServerSession implements MessageEndpoint {
     private final DebuggerDomain debugger;
     private final ProfilerDomain profiler;
     private final ReadWriteLock domainLock;
-
     final InspectorExecutionContext context;
     private volatile MessageEndpoint messageEndpoint;
     private volatile JSONMessageListener jsonMessageListener;
@@ -75,6 +75,7 @@ public final class InspectServerSession implements MessageEndpoint {
         this.context = context;
         this.domainLock = domainLock;
     }
+
 
     public static InspectServerSession create(InspectorExecutionContext context, boolean debugBreak, ConnectionWatcher connectionWatcher) {
         return create(context, debugBreak, connectionWatcher, new BreakpointsListenerBasicImpl());
@@ -116,6 +117,12 @@ public final class InspectServerSession implements MessageEndpoint {
     // For tests only
     public DebuggerDomain getDebugger() {
         return debugger;
+    }
+
+    public void notifyClosing() {
+        runtime.notifyClosing();
+        debugger.notifyClosing();
+        profiler.notifyClosing();
     }
 
     public void dispose() {
