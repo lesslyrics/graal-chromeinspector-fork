@@ -132,49 +132,6 @@ public final class ScriptsHandler implements LoadSourceListener {
         return scr;
     }
 
-//    public String getSourceURL(Source source) {
-//        URL url = source.getURL();
-//        if (url != null) {
-//            return url.toExternalForm();
-//        }
-//        String path = source.getPath();
-//        if (path != null) {
-//            if (source.getURI().isAbsolute()) {
-//                return source.getURI().toString();
-//            } else {
-//                try {
-//                    return env.getTruffleFile(path).getAbsoluteFile().toUri().toString();
-//                } catch (SecurityException ex) {
-//                    if (File.separatorChar == '/') {
-//                        return path;
-//                    } else {
-//                        return path.replace(File.separatorChar, '/');
-//                    }
-//                }
-//            }
-//        }
-//        String name = source.getName();
-//        if (name != null) {
-//            String uniqueName;
-//            synchronized (uniqueSourceNames) {
-//                int count = uniqueSourceNames.getOrDefault(name, 0);
-//                count++;
-//                if (count == 1) {
-//                    uniqueName = name;
-//                } else {
-//                    do {
-//                        uniqueName = count + "/" + name;
-//                    } while (uniqueSourceNames.containsKey(uniqueName) && (count++) > 0);
-//                }
-//                uniqueSourceNames.put(name, count);
-//            }
-//            return uniqueName;
-//        }
-//        return source.getURI().toString();
-//    }
-    
- 
-    
         public String getSourceURL(Source source) {
         URL url = source.getURL();
         if (url != null) {
@@ -217,13 +174,22 @@ public final class ScriptsHandler implements LoadSourceListener {
         }
     }
 
+
+    @NotNull
+    public static String toSystemIndependentName(@NotNull String fileName) {
+        return fileName.replace('\\', '/');
+    }
+
+
+
     static boolean compareURLs(String url1, String url2) {
-        String surl1 = stripScheme(url1);
-        String surl2 = stripScheme(url2);
+        String surl1 = toSystemIndependentName(stripScheme(url1));
+        String surl2 = toSystemIndependentName(stripScheme(url2));
         // Either equals,
         // or equals while ignoring the initial slash (workaround for Chromium bug #851853)
         return surl1.equals(surl2) || surl1.startsWith("/") && surl1.substring(1).equals(surl2);
     }
+
 
     private static String stripScheme(String url) {
         // we can strip the scheme part iff it's "file"
