@@ -173,8 +173,7 @@ public final class ScriptsHandler implements LoadSourceListener {
     }
 
 
-    @NotNull
-    public static String toSystemIndependentName(@NotNull String fileName) {
+    public static String toSystemIndependentName(String fileName) {
         return fileName.replace('\\', '/');
     }
 

@@ -134,8 +134,8 @@ public final class InspectorServer extends WebSocketServer implements InspectorW
 
                 sslContext = SSLContext.getInstance("TLS");
                 sslContext.init(keyManagerFactory.getKeyManagers(),
-                                trustManagerFactory.getTrustManagers(),
-                                new SecureRandom());
+                        trustManagerFactory.getTrustManagers(),
+                        new SecureRandom());
             } catch (GeneralSecurityException ex) {
                 throw new IOException(ex);
             }
@@ -177,8 +177,8 @@ public final class InspectorServer extends WebSocketServer implements InspectorW
     }
 
     public static InspectorServer get(InetSocketAddress isa, Token token, String pathContainingToken, InspectorExecutionContext context, boolean debugBrk,
-                    boolean secure, KeyStoreOptions keyStoreOptions, ConnectionWatcher connectionWatcher,
-                    InspectServerSession initialSession) throws IOException {
+                                      boolean secure, KeyStoreOptions keyStoreOptions, ConnectionWatcher connectionWatcher,
+                                      InspectServerSession initialSession) throws IOException {
         InspectorServer wss;
         boolean startServer = false;
         synchronized (SERVERS) {
@@ -440,7 +440,11 @@ public final class InspectorServer extends WebSocketServer implements InspectorW
                 }
             }
         }
-        super.stop();
+        try {
+            super.stop();
+        } catch (IOException e){
+
+        }
     }
 
     private static class ServerPathSession {
