@@ -975,7 +975,7 @@ public final class InspectorDebugger extends DebuggerDomain {
     }
 
     public boolean sourceMatchesBlackboxPatterns(Source source, Pattern[] patterns) {
-        String uri = scriptsHandler.getSourceURL(source);
+        String uri = source.getName();
         for (Pattern pattern : patterns) {
             // Check whether pattern corresponds to:
             // 1) the name of a file
@@ -1212,7 +1212,7 @@ public final class InspectorDebugger extends DebuggerDomain {
                     silentResume = false;
                 }
             } finally {
-                onSuspendPhaser.arriveAndDeregister();
+                onSuspendPhaser.arrive();
                 if (delayUnlock.getAndSet(false)) {
                     future.set(scheduler.schedule(() -> {
                         unlock();
@@ -1288,6 +1288,7 @@ public final class InspectorDebugger extends DebuggerDomain {
             try {
                 scheduler.awaitTermination(30, TimeUnit.SECONDS);
             } catch (InterruptedException e) {
+                e.printStackTrace();
             }
         }
     }
