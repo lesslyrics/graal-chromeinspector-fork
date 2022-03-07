@@ -60,13 +60,11 @@ import com.oracle.truffle.api.instrumentation.EventBinding;
 import com.oracle.truffle.api.instrumentation.TruffleInstrument;
 import com.oracle.truffle.api.interop.TruffleObject;
 import com.oracle.truffle.api.nodes.LanguageInfo;
-
 import com.oracle.truffle.tools.chromeinspector.InspectorExecutionContext;
-import com.oracle.truffle.tools.chromeinspector.objects.Inspector;
 import com.oracle.truffle.tools.chromeinspector.client.InspectWSClient;
+import com.oracle.truffle.tools.chromeinspector.objects.Inspector;
 import com.oracle.truffle.tools.chromeinspector.server.ConnectionWatcher;
 import com.oracle.truffle.tools.chromeinspector.server.InspectServerSession;
-import com.oracle.truffle.tools.chromeinspector.server.WSInterceptorServer;
 import com.oracle.truffle.tools.chromeinspector.server.InspectorServer;
 import com.oracle.truffle.tools.chromeinspector.server.InspectorServerConnection;
 import com.oracle.truffle.tools.chromeinspector.server.WSInterceptorServer;
@@ -168,48 +166,51 @@ public final class InspectorInstrument extends TruffleInstrument {
         }
     }
 
-    @com.oracle.truffle.api.Option(name = "", help = "Start the Chrome inspector on [[host:]port]. (default: <loopback address>:" + DEFAULT_PORT +
-            ")", category = OptionCategory.USER, stability = OptionStability.STABLE) //
+    @com.oracle.truffle.api.Option(name = "", help = "Start the Chrome inspector on [[host:]port].", category = OptionCategory.USER) //
     static final OptionKey<HostAndPort> Inspect = new OptionKey<>(DEFAULT_ADDRESS, ADDRESS_OR_BOOLEAN);
 
-    @com.oracle.truffle.api.Option(help = "Attach to an existing endpoint instead of creating a new one. (default:false)", category = OptionCategory.INTERNAL) //
+    @com.oracle.truffle.api.Option(help = "Attach to an existing endpoint instead of creating a new one.", category = OptionCategory.INTERNAL) //
     static final OptionKey<Boolean> Attach = new OptionKey<>(false);
 
-    @com.oracle.truffle.api.Option(help = "Suspend the execution at first executed source line. (default:true)", category = OptionCategory.USER, stability = OptionStability.STABLE) //
+    @com.oracle.truffle.api.Option(help = "Suspend the execution at first executed source line (default: true).",  category = OptionCategory.USER) //
     static final OptionKey<Boolean> Suspend = new OptionKey<>(true);
 
-    @com.oracle.truffle.api.Option(help = "Do not execute any source code until inspector client is attached. (default:false)", category = OptionCategory.USER, stability = OptionStability.STABLE) //
+    @com.oracle.truffle.api.Option(help = "Do not execute any source code until inspector client is attached.", category = OptionCategory.USER) //
     static final OptionKey<Boolean> WaitAttached = new OptionKey<>(false);
 
-    @com.oracle.truffle.api.Option(help = "Specifies list of directories or ZIP/JAR files representing source path. (default:none)", category = OptionCategory.USER, stability = OptionStability.STABLE) //
+    private static final String SOURCE_PATH_USAGE = "<path>,<path>,...";
+
+    @com.oracle.truffle.api.Option(help = "Specifies list of directories or ZIP/JAR files representing source path (default: empty list).", category = OptionCategory.USER) //
     static final OptionKey<List<URI>> SourcePath = new OptionKey<>(Collections.emptyList(), SOURCE_PATH);
 
-    @com.oracle.truffle.api.Option(help = "Hide internal errors that can occur as a result of debugger inspection. (default:false)", category = OptionCategory.EXPERT) //
+    @com.oracle.truffle.api.Option(help = "Hide internal errors that can occur as a result of debugger inspection.", category = OptionCategory.EXPERT) //
     static final OptionKey<Boolean> HideErrors = new OptionKey<>(false);
 
     @com.oracle.truffle.api.Option(help = "Path to the chrome inspect. This path should be unpredictable. Do note that any website opened in your browser that has knowledge of the URL can connect to the debugger. A predictable path can thus be " +
-            "abused by a malicious website to execute arbitrary code on your computer, even if you are behind a firewall. (default: randomly generated)", category = OptionCategory.USER, stability = OptionStability.STABLE) //
+                    "abused by a malicious website to execute arbitrary code on your computer, even if you are behind a firewall. (default: randomly generated)", //
+                     category = OptionCategory.USER) //
     static final OptionKey<String> Path = new OptionKey<>("");
 
-    @com.oracle.truffle.api.Option(help = "Inspect internal sources. (default:false)", category = OptionCategory.INTERNAL) //
+    @com.oracle.truffle.api.Option(help = "Inspect internal sources.", category = OptionCategory.INTERNAL) //
     static final OptionKey<Boolean> Internal = new OptionKey<>(false);
 
-    @com.oracle.truffle.api.Option(help = "Inspect language initialization. (default:false)", category = OptionCategory.INTERNAL) //
+    @com.oracle.truffle.api.Option(help = "Inspect language initialization.", category = OptionCategory.INTERNAL) //
     static final OptionKey<Boolean> Initialization = new OptionKey<>(false);
 
-    @com.oracle.truffle.api.Option(help = "Use TLS/SSL. (default: false for loopback address, true otherwise)", category = OptionCategory.USER, stability = OptionStability.STABLE) //
+    @com.oracle.truffle.api.Option(help = "Use TLS/SSL. (default: false for loopback address, true otherwise)", category = OptionCategory.USER) //
     static final OptionKey<Boolean> Secure = new OptionKey<>(true);
 
-    @com.oracle.truffle.api.Option(help = "File path to keystore used for secure connection. (default:javax.net.ssl.keyStore system property)", category = OptionCategory.USER, stability = OptionStability.STABLE) //
+    @com.oracle.truffle.api.Option(help = "File path to keystore used for secure connection. (default:javax.net.ssl.keyStore system property)", category = OptionCategory.USER) //
     static final OptionKey<String> KeyStore = new OptionKey<>("");
 
-    @com.oracle.truffle.api.Option(help = "The keystore type. (default:javax.net.ssl.keyStoreType system property, or \\\"JKS\\\")", category = OptionCategory.USER, stability = OptionStability.STABLE) //
+    @com.oracle.truffle.api.Option(help = "The keystore type. (default:javax.net.ssl.keyStoreType system property, or \\\"JKS\\\")", category = OptionCategory.USER) //
     static final OptionKey<String> KeyStoreType = new OptionKey<>("");
 
-    @com.oracle.truffle.api.Option(help = "The keystore password. (default:javax.net.ssl.keyStorePassword system property)", category = OptionCategory.USER, stability = OptionStability.STABLE) //
+    @com.oracle.truffle.api.Option(help = "The keystore password. (default:javax.net.ssl.keyStorePassword system property)", category = OptionCategory.USER) //
     static final OptionKey<String> KeyStorePassword = new OptionKey<>("");
 
-    @com.oracle.truffle.api.Option(help = "Password for recovering keys from a keystore. (default:javax.net.ssl.keyPassword system property, or keystore password)", category = OptionCategory.USER, stability = OptionStability.STABLE) //
+    @com.oracle.truffle.api.Option(help = "Password for recovering keys from a keystore. (default:javax.net.ssl.keyPassword system property, or keystore password)", //
+                  category = OptionCategory.USER) //
     static final OptionKey<String> KeyPassword = new OptionKey<>("");
 
     public static final String INSTRUMENT_ID = "inspect";
@@ -223,8 +224,8 @@ public final class InspectorInstrument extends TruffleInstrument {
             connectionWatcher = new ConnectionWatcher();
             try {
                 server = new Server(env, "Main Context", hostAndPort, options.get(Attach), options.get(Suspend), options.get(WaitAttached), options.get(HideErrors), options.get(Internal),
-                        options.get(Initialization), options.get(Path), options.hasBeenSet(Secure), options.get(Secure), new KeyStoreOptions(options), options.get(SourcePath),
-                        connectionWatcher);
+                                options.get(Initialization), options.get(Path), options.hasBeenSet(Secure), options.get(Secure), new KeyStoreOptions(options), options.get(SourcePath),
+                                connectionWatcher);
             } catch (IOException e) {
                 throw new InspectorIOException(hostAndPort.getHostPort(), e);
             }
@@ -248,7 +249,7 @@ public final class InspectorInstrument extends TruffleInstrument {
                 hostAndPort = new HostAndPort(host, port);
                 try {
                     server = new Server(env, "Main Context", hostAndPort, false, false, wait, options.get(HideErrors), options.get(Internal),
-                            options.get(Initialization), null, options.hasBeenSet(Secure), options.get(Secure), new KeyStoreOptions(options), options.get(SourcePath), connectionWatcher);
+                                    options.get(Initialization), null, options.hasBeenSet(Secure), options.get(Secure), new KeyStoreOptions(options), options.get(SourcePath), connectionWatcher);
                 } catch (IOException e) {
                     PrintWriter info = new PrintWriter(env.err());
                     info.println(new InspectorIOException(hostAndPort.getHostPort(), e).getLocalizedMessage());
@@ -376,6 +377,11 @@ public final class InspectorInstrument extends TruffleInstrument {
                 ia = inetAddress;
             }
             return new InetSocketAddress(ia, port);
+        }
+
+        @Override
+        public String toString() {
+            return (host != null ? host : "<loopback address>") + ":" + port;
         }
     }
 
