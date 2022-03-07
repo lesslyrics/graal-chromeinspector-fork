@@ -132,7 +132,7 @@ public final class ScriptsHandler implements LoadSourceListener {
         return scr;
     }
 
-    public String getSourceURL(Source source) {
+        public String getSourceURL(Source source) {
         URL url = source.getURL();
         if (url != null) {
             return url.toExternalForm();
@@ -163,6 +163,8 @@ public final class ScriptsHandler implements LoadSourceListener {
         return source.getURI().toString();
     }
     
+
+
 
     @Override
     public void onLoad(LoadSourceEvent event) {

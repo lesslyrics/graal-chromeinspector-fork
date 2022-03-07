@@ -29,9 +29,9 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.UnknownHostException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.UnknownHostException;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Base64;
@@ -69,11 +69,12 @@ import com.oracle.truffle.tools.chromeinspector.server.InspectServerSession;
 import com.oracle.truffle.tools.chromeinspector.server.WSInterceptorServer;
 import com.oracle.truffle.tools.chromeinspector.server.InspectorServer;
 import com.oracle.truffle.tools.chromeinspector.server.InspectorServerConnection;
+import com.oracle.truffle.tools.chromeinspector.server.WSInterceptorServer;
 
 /**
  * Chrome inspector as an instrument.
  */
-@TruffleInstrument.Registration(id = InspectorInstrument.INSTRUMENT_ID, name = "Chrome Inspector", version = InspectorInstrument.VERSION, services = TruffleObject.class)
+@TruffleInstrument.Registration(id = InspectorInstrument.INSTRUMENT_ID, name = "Chrome Inspector", version = InspectorInstrument.VERSION, services = TruffleObject.class, website = "https://www.graalvm.org/tools/chrome-debugger/")
 public final class InspectorInstrument extends TruffleInstrument {
 
     private static final int DEFAULT_PORT = 9229;
@@ -305,7 +306,7 @@ public final class InspectorInstrument extends TruffleInstrument {
                         OptionDescriptor descriptor = iterator.next();
                         if (descriptor.getKey() == SourcePath) {
                             String example = " Example: " + File.separator + "projects" + File.separator + "foo" + File.separator + "src" + File.pathSeparator + "sources.jar" + File.pathSeparator +
-                                    "package.zip!/src";
+                                            "package.zip!/src";
                             descriptor = OptionDescriptor.newBuilder(SourcePath, descriptor.getName()).deprecated(descriptor.isDeprecated()).category(descriptor.getCategory()).help(
                                     descriptor.getHelp() + example).build();
                         }
@@ -386,8 +387,8 @@ public final class InspectorInstrument extends TruffleInstrument {
         private final InspectorExecutionContext executionContext;
 
         Server(final Env env, final String contextName, final HostAndPort hostAndPort, final boolean attach, final boolean debugBreak, final boolean waitAttached, final boolean hideErrors,
-               final boolean inspectInternal, final boolean inspectInitialization, final String pathOrNull, final boolean secureHasBeenSet, final boolean secureValue,
-               final KeyStoreOptions keyStoreOptions, final List<URI> sourcePath, final ConnectionWatcher connectionWatcher) throws IOException {
+                        final boolean inspectInternal, final boolean inspectInitialization, final String pathOrNull, final boolean secureHasBeenSet, final boolean secureValue,
+                        final KeyStoreOptions keyStoreOptions, final List<URI> sourcePath, final ConnectionWatcher connectionWatcher) throws IOException {
             InetSocketAddress socketAddress = hostAndPort.createSocket();
             PrintWriter info = new PrintWriter(env.err(), true);
             final String pathContainingToken;
@@ -516,7 +517,7 @@ public final class InspectorInstrument extends TruffleInstrument {
         }
 
         private static void restartServerEndpointOnClose(HostAndPort hostAndPort, Env env, URI wsuri, InspectorExecutionContext executionContext, ConnectionWatcher connectionWatcher,
-                                                         InspectServerSession iss, WSInterceptorServer interceptor) {
+                        InspectServerSession iss, WSInterceptorServer interceptor) {
             iss.onClose(() -> {
                 // debugBreak = false, do not break on re-connect
                 InspectServerSession newSession = InspectServerSession.create(executionContext, false, connectionWatcher);
