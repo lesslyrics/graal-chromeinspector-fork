@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2017, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,12 +35,11 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.graalvm.polyglot.io.MessageEndpoint;
 
-import com.oracle.truffle.tools.utils.json.JSONArray;
-import com.oracle.truffle.tools.utils.json.JSONException;
-import com.oracle.truffle.tools.utils.json.JSONObject;
 import com.oracle.truffle.api.interop.ArityException;
 import com.oracle.truffle.api.interop.UnsupportedMessageException;
 import com.oracle.truffle.api.interop.UnsupportedTypeException;
+import com.oracle.truffle.tools.chromeinspector.BreakpointsListener;
+import com.oracle.truffle.tools.chromeinspector.BreakpointsListenerBasicImpl;
 import com.oracle.truffle.tools.chromeinspector.InspectorDebugger;
 import com.oracle.truffle.tools.chromeinspector.InspectorExecutionContext;
 import com.oracle.truffle.tools.chromeinspector.InspectorProfiler;
@@ -57,6 +56,10 @@ import com.oracle.truffle.tools.chromeinspector.events.Event;
 import com.oracle.truffle.tools.chromeinspector.events.EventHandler;
 import com.oracle.truffle.tools.chromeinspector.types.CallArgument;
 import com.oracle.truffle.tools.chromeinspector.types.Location;
+import com.oracle.truffle.tools.utils.java_websocket.exceptions.WebsocketNotConnectedException;
+import org.graalvm.shadowed.org.json.JSONArray;
+import org.graalvm.shadowed.org.json.JSONException;
+import org.graalvm.shadowed.org.json.JSONObject;
 
 public final class InspectServerSession implements MessageEndpoint {
 
@@ -79,10 +82,15 @@ public final class InspectServerSession implements MessageEndpoint {
         this.domainLock = domainLock;
     }
 
-    public static InspectServerSession create(InspectorExecutionContext context, boolean debugBreak, ConnectionWatcher connectionWatcher) {
+    public static InspectServerSession create(InspectorExecutionContext context, boolean debugBreak, ConnectionWatcher connectionWatcher, Runnable sessionDisposal) {
+        return create(context, debugBreak, connectionWatcher, sessionDisposal, new BreakpointsListenerBasicImpl());
+    }
+
+    public static InspectServerSession create(InspectorExecutionContext context, boolean debugBreak, ConnectionWatcher connectionWatcher, Runnable sessionDisposal,
+                    BreakpointsListener breakpointsListener) {
         ReadWriteLock domainLock = new ReentrantReadWriteLock();
         RuntimeDomain runtime = new InspectorRuntime(context);
-        DebuggerDomain debugger = new InspectorDebugger(context, debugBreak, domainLock);
+        DebuggerDomain debugger = new InspectorDebugger(context, debugBreak, domainLock, sessionDisposal, breakpointsListener);
         ProfilerDomain profiler = new InspectorProfiler(context, connectionWatcher);
         return new InspectServerSession(runtime, debugger, profiler, context, domainLock);
     }
@@ -97,7 +105,7 @@ public final class InspectServerSession implements MessageEndpoint {
 
     @Override
     public void sendClose() throws IOException {
-        if (processThread == null) {
+        if (isClosed()) {
             throw createClosedException();
         }
         Runnable onCloseRunnable = onClose;
@@ -108,12 +116,19 @@ public final class InspectServerSession implements MessageEndpoint {
     }
 
     boolean isClosed() {
-        return processThread == null;
+        CommandProcessThread cmdProcessThread = processThread;
+        return cmdProcessThread == null || cmdProcessThread.isClosed();
     }
 
     // For tests only
     public DebuggerDomain getDebugger() {
         return debugger;
+    }
+
+    public void notifyClosing() {
+        runtime.notifyClosing();
+        debugger.notifyClosing();
+        profiler.notifyClosing();
     }
 
     public void dispose() {
@@ -134,7 +149,6 @@ public final class InspectServerSession implements MessageEndpoint {
             cmdProcessThread = processThread;
             if (cmdProcessThread != null) {
                 cmdProcessThread.dispose();
-                processThread = null;
             }
         }
         if (cmdProcessThread != null) {
@@ -182,7 +196,7 @@ public final class InspectServerSession implements MessageEndpoint {
 
     @Override
     public void sendText(String message) throws IOException {
-        if (processThread == null) {
+        if (isClosed()) {
             throw createClosedException();
         }
         Command cmd;
@@ -264,14 +278,14 @@ public final class InspectServerSession implements MessageEndpoint {
 
     @Override
     public void sendPing(ByteBuffer data) throws IOException {
-        if (processThread == null) {
+        if (isClosed()) {
             throw createClosedException();
         }
     }
 
     @Override
     public void sendPong(ByteBuffer data) throws IOException {
-        if (processThread == null) {
+        if (isClosed()) {
             throw createClosedException();
         }
     }
@@ -383,6 +397,9 @@ public final class InspectServerSession implements MessageEndpoint {
                 runtime.releaseObjectGroup(json.optString("objectGroup"));
                 break;
             case "Debugger.enable":
+                JSONObject dbgJson = new JSONObject();
+                dbgJson.put("debuggerId", debugger.getUniqueDebuggerId());
+                resultParams = new Params(dbgJson);
                 debugger.enable();
                 break;
             case "Debugger.disable":
@@ -561,7 +578,7 @@ public final class InspectServerSession implements MessageEndpoint {
         return dom;
     }
 
-    private class EventHandlerImpl implements EventHandler {
+    private final class EventHandlerImpl implements EventHandler {
 
         @Override
         public void event(Event event) {
@@ -571,6 +588,8 @@ public final class InspectServerSession implements MessageEndpoint {
                     listener.sendText(event.toJSONString());
                 } catch (IOException ex) {
                     context.logException(ex);
+                } catch (WebsocketNotConnectedException ex) {
+                    // disconnected
                 }
             }
             JSONMessageListener jsonListener = jsonMessageListener;
@@ -606,14 +625,15 @@ public final class InspectServerSession implements MessageEndpoint {
         }
     }
 
-    private class CommandProcessThread extends Thread {
+    private class CommandProcessThread implements Runnable {
 
+        private final Thread thread;
         private volatile boolean disposed = false;
         private final BlockingQueue<Command> commands = new LinkedBlockingQueue<>();
 
         CommandProcessThread() {
-            super("chromeinspector.server.CommandProcessThread");
-            setDaemon(true);
+            thread = context.getEnv().createSystemThread(this);
+            thread.setName("chromeinspector.server.CommandProcessThread");
         }
 
         void push(Command cmd) {
@@ -627,9 +647,17 @@ public final class InspectServerSession implements MessageEndpoint {
             }
         }
 
+        void start() {
+            thread.start();
+        }
+
         void dispose() {
             disposed = true;
-            interrupt();
+            thread.interrupt();
+        }
+
+        boolean isClosed() {
+            return disposed && !thread.isAlive();
         }
 
         @Override
@@ -650,6 +678,8 @@ public final class InspectServerSession implements MessageEndpoint {
                             listener.sendText(result.toString());
                         } catch (IOException ex) {
                             context.logException(ex);
+                        } catch (WebsocketNotConnectedException ex) {
+                            // disconnected
                         }
                     }
                     JSONMessageListener jsonListener = jsonMessageListener;
@@ -663,6 +693,11 @@ public final class InspectServerSession implements MessageEndpoint {
                 }
                 postProcessor.run();
             }
+        }
+
+        private void join() throws InterruptedException {
+            thread.join();
+            commands.clear();
         }
 
     }
